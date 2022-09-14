@@ -1,0 +1,63 @@
+FROM php:7.4-fpm-alpine
+LABEL maintainer="Joao Arquimedes"
+
+# update
+RUN apk update
+RUN apk upgrade
+
+# Install dependencies
+RUN apk add bzip2-dev libpng-dev libzip-dev zip oniguruma-dev libpq postgresql-dev openldap-dev libxml2-dev
+
+# Enable dependencies
+RUN docker-php-ext-install bcmath
+RUN docker-php-ext-install bz2
+RUN docker-php-ext-install ctype
+RUN docker-php-ext-install fileinfo
+RUN docker-php-ext-install gd
+RUN docker-php-ext-install intl
+RUN docker-php-ext-install json
+RUN docker-php-ext-install ldap
+RUN docker-php-ext-install mbstring
+RUN docker-php-ext-install mysqli
+RUN docker-php-ext-install pdo
+RUN docker-php-ext-install pdo_mysql
+RUN docker-php-ext-install pdo_pgsql
+RUN docker-php-ext-install pgsql
+RUN docker-php-ext-install session
+RUN docker-php-ext-install sockets
+RUN docker-php-ext-install tokenizer
+RUN docker-php-ext-install xml
+RUN docker-php-ext-install zip
+RUN docker-php-ext-install soap
+
+# Install composer
+RUN apk add git
+RUN php -r "copy('https://getcomposer.org/composer-2.phar', 'composer');"
+RUN chmod +x composer && mv composer /usr/local/bin/
+
+# Install Oracle Drive
+RUN apk add gcc musl-dev libnsl libnsl-dev libaio gcompat $PHPIZE_DEPS
+ENV LD_LIBRARY_PATH=/usr/local/oracle/instantclient_19_16/
+ENV ORACLE_HOME=/usr/local/oracle/instantclient_19_16/
+RUN mkdir /tmp/oracle
+RUN curl -o /tmp/oracle/basic.zip https://download.oracle.com/otn_software/linux/instantclient/1916000/instantclient-basic-linux.x64-19.16.0.0.0dbru.zip
+RUN curl -o /tmp/oracle/sdk.zip https://download.oracle.com/otn_software/linux/instantclient/1916000/instantclient-sdk-linux.x64-19.16.0.0.0dbru.zip
+RUN curl -o /tmp/oracle/sqlplus.zip https://download.oracle.com/otn_software/linux/instantclient/1916000/instantclient-sqlplus-linux.x64-19.16.0.0.0dbru.zip
+RUN unzip -d /usr/local/oracle /tmp/oracle/basic.zip
+RUN unzip -d /usr/local/oracle /tmp/oracle/sdk.zip
+RUN unzip -d /usr/local/oracle /tmp/oracle/sqlplus.zip
+RUN echo "instantclient,${ORACLE_HOME}" | pecl install oci8-2.2.0
+RUN echo 'extension=oci8.so' > /usr/local/etc/php/conf.d/oci-8.ini
+RUN rm -rf /tmp/oracle
+RUN ln -s ${ORACLE_HOME}/sqlplus /usr/bin/sqlplus
+RUN ln -s ${ORACLE_HOME}/lib* /usr/lib
+RUN ln -s /usr/lib/libnsl.so /usr/lib/libnsl.so.1
+RUN ln -s /usr/lib/libc.so /usr/lib/libresolv.so.2
+
+WORKDIR /var/www/html
+RUN chown -R www-data. /var/www
+USER www-data
+
+EXPOSE 9000
+
+CMD php-fpm
